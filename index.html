@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Enxoval 🏠</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sage: #7C9A7E;
+    --sage-light: #A8C5AA;
+    --sage-dark: #4A6B4C;
+    --cream: #F8F4EF;
+    --warm: #E8DDD0;
+    --terracotta: #C4714A;
+    --terracotta-light: #E8A882;
+    --charcoal: #2C2C2C;
+    --mid: #6B6B6B;
+    --light: #9B9B9B;
+    --white: #FFFFFF;
+    --status-buy: #C4714A;
+    --status-search: #D4A017;
+    --status-bought: #7C9A7E;
+    --status-installed: #4A6B4C;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C4A882' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* LOADING OVERLAY */
+  #loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999;
+    gap: 16px;
+    transition: opacity 0.4s ease;
+  }
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-icon { font-size: 48px; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+  .loading-text { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--charcoal); }
+  .loading-sub { font-size: 13px; color: var(--light); }
+
+  /* SYNC INDICATOR */
+  #sync-indicator {
+    position: fixed; top: 70px; right: 16px;
+    background: var(--charcoal); color: white;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+    opacity: 0; transition: opacity 0.3s;
+    z-index: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #sync-indicator.show { opacity: 1; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage-light); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* HEADER */
+  header {
+    background: var(--charcoal);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--sage);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--white); letter-spacing: -0.5px;
+  }
+  .logo-sub { font-size: 11px; color: var(--light); letter-spacing: 2px; text-transform: uppercase; }
+  .header-actions { display: flex; gap: 8px; }
+  .btn-export {
+    background: var(--sage); color: white; border: none;
+    padding: 8px 18px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-export:hover { background: var(--sage-dark); }
+
+  /* HERO STATS */
+  .hero {
+    padding: 48px 32px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .stat-card {
+    background: var(--white); border-radius: 20px; padding: 28px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
+  .stat-card.accent { background: var(--sage-dark); color: white; }
+  .stat-card.accent .stat-label { color: rgba(255,255,255,0.7); }
+  .stat-card.accent .stat-value { color: white; }
+  .stat-card::after {
+    content: attr(data-icon);
+    position: absolute; right: -8px; bottom: -10px;
+    font-size: 72px; opacity: 0.07; line-height: 1;
+  }
+  .stat-label { font-size: 12px; font-weight: 500; color: var(--light); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .stat-value { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 700; line-height: 1; }
+  .stat-value span { font-size: 18px; font-weight: 400; font-family: 'DM Sans', sans-serif; }
+  .stat-sub { font-size: 12px; color: var(--mid); margin-top: 8px; }
+
+  /* PROGRESS BAR HERO */
+  .progress-hero {
+    background: var(--warm); border-radius: 20px; padding: 28px 32px;
+    margin: 0 32px 32px;
+    display: flex; align-items: center; gap: 32px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+  }
+  .progress-hero-label { font-size: 14px; font-weight: 600; color: var(--charcoal); white-space: nowrap; }
+  .progress-hero-bar { flex: 1; height: 12px; background: rgba(0,0,0,0.1); border-radius: 6px; overflow: hidden; }
+  .progress-hero-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sage), var(--sage-dark));
+    border-radius: 6px; transition: width 1s ease;
+  }
+  .progress-hero-pct { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--sage-dark); white-space: nowrap; }
+
+  /* TABS */
+  .tabs-wrap { padding: 0 32px 20px; }
+  .tabs { display: flex; gap: 8px; background: var(--white); border-radius: 14px; padding: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); width: fit-content; }
+  .tab {
+    padding: 10px 22px; border-radius: 10px; border: none; background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; color: var(--mid); transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab.active { background: var(--charcoal); color: white; }
+  .tab:hover:not(.active) { background: var(--warm); color: var(--charcoal); }
+  .tab .badge { background: var(--terracotta); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .tab.active .badge { background: white; color: var(--charcoal); }
+
+  /* GRID MAIN */
+  .main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; padding: 0 32px 48px; }
+
+  /* ITEMS LIST */
+  .room-section { display: none; }
+  .room-section.visible { display: block; }
+  .room-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .room-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--charcoal); }
+  .room-badge { background: var(--warm); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--mid); }
+
+  .items-list { display: flex; flex-direction: column; gap: 10px; }
+  .item-card {
+    background: var(--white); border-radius: 14px; padding: 16px 20px;
+    display: grid; grid-template-columns: 1fr 100px 130px 120px 120px;
+    align-items: center; gap: 16px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05); transition: all 0.2s;
+    animation: slideIn 0.3s ease forwards;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .item-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); transform: translateX(4px); }
+
+  .item-name { font-weight: 500; font-size: 15px; }
+  .item-qty-wrap { display: flex; align-items: center; gap: 6px; }
+  .qty-btn {
+    width: 26px; height: 26px; border-radius: 8px; border: 1.5px solid var(--warm);
+    background: transparent; cursor: pointer; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; color: var(--mid);
+  }
+  .qty-btn:hover { background: var(--warm); color: var(--charcoal); }
+  .qty-display { font-weight: 600; font-size: 15px; min-width: 24px; text-align: center; }
+
+  .price-input {
+    width: 100%; border: 1.5px solid var(--warm); border-radius: 8px;
+    padding: 6px 10px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--charcoal); background: var(--cream); transition: border-color 0.2s; text-align: right;
+  }
+  .price-input:focus { outline: none; border-color: var(--sage); background: white; }
+  .item-total { font-weight: 600; font-size: 15px; color: var(--sage-dark); text-align: right; }
+
+  .status-select {
+    border: none; border-radius: 20px; padding: 5px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; appearance: none; text-align: center;
+  }
+  .status-A\ comprar { background: #FDEAE3; color: #C4714A; }
+  .status-Pesquisando { background: #FEF3C7; color: #92400E; }
+  .status-Comprado { background: #D1FAE5; color: #065F46; }
+  .status-Instalado { background: #DBEAFE; color: #1E40AF; }
+
+  .items-header {
+    display: grid; grid-template-columns: 1fr 100px 130px 120px 120px;
+    gap: 16px; padding: 0 20px 8px;
+    font-size: 11px; font-weight: 600; color: var(--light);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 20px; }
+  .side-card { background: var(--white); border-radius: 20px; padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+  .side-card-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--charcoal); margin-bottom: 18px; }
+
+  .donut-wrap { display: flex; flex-direction: column; align-items: center; }
+  .donut-svg { width: 160px; height: 160px; }
+  .donut-center { text-anchor: middle; dominant-baseline: middle; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; width: 100%; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; color: var(--mid); }
+  .legend-count { font-weight: 600; color: var(--charcoal); }
+
+  .budget-bar-wrap { margin-top: 12px; }
+  .budget-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .budget-room { color: var(--mid); }
+  .budget-val { font-weight: 600; }
+  .budget-bar { height: 6px; background: var(--warm); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .budget-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--sage-light), var(--sage-dark)); transition: width 0.8s ease; }
+
+  .room-mini { display: flex; flex-direction: column; gap: 12px; }
+  .room-mini-row { }
+  .room-mini-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .room-mini-name { font-weight: 500; }
+  .room-mini-pct { color: var(--sage-dark); font-weight: 600; }
+  .room-mini-bar { height: 6px; background: var(--warm); border-radius: 3px; overflow: hidden; }
+  .room-mini-fill { height: 100%; border-radius: 3px; background: var(--sage); transition: width 0.8s ease; }
+
+  .add-item-row { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1.5px dashed var(--warm); }
+  .add-input {
+    flex: 1; border: 1.5px solid var(--warm); border-radius: 10px;
+    padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    background: var(--cream); color: var(--charcoal);
+  }
+  .add-input:focus { outline: none; border-color: var(--sage); background: white; }
+  .add-btn {
+    background: var(--sage); color: white; border: none; border-radius: 10px;
+    padding: 9px 16px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .add-btn:hover { background: var(--sage-dark); }
+
+  .toast {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--charcoal); color: white;
+    padding: 12px 20px; border-radius: 12px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 1024px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .hero { grid-template-columns: 1fr; }
+    .header-inner { padding: 12px 16px; }
+    .main-grid, .hero, .tabs-wrap, .progress-hero { padding-left: 16px; padding-right: 16px; }
+    .item-card { grid-template-columns: 1fr; }
+    .items-header { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="loading-icon">🏠</div>
+  <div class="loading-text">Meu Enxoval</div>
+  <div class="loading-sub">Carregando sua lista...</div>
+</div>
+
+<!-- Sync indicator -->
+<div id="sync-indicator">
+  <div class="sync-dot"></div>
+  <span id="sync-text">Salvando...</span>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🏠</div>
+      <div>
+        <div class="logo-text">Meu Enxoval</div>
+        <div class="logo-sub">Organização do apartamento</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="hero">
+    <div class="stat-card" data-icon="📦">
+      <div class="stat-label">Total de itens</div>
+      <div class="stat-value" id="total-itens">0</div>
+      <div class="stat-sub">em todos os cômodos</div>
+    </div>
+    <div class="stat-card" data-icon="✅">
+      <div class="stat-label">Já comprados</div>
+      <div class="stat-value" id="total-comprados">0</div>
+      <div class="stat-sub">itens adquiridos</div>
+    </div>
+    <div class="stat-card" data-icon="💰">
+      <div class="stat-label">Orçamento estimado</div>
+      <div class="stat-value" id="total-orcamento"><span>R$</span> 0</div>
+      <div class="stat-sub">com preços preenchidos</div>
+    </div>
+    <div class="stat-card accent" data-icon="🎯">
+      <div class="stat-label">Progresso geral</div>
+      <div class="stat-value" id="total-progresso">0<span>%</span></div>
+      <div class="stat-sub">do enxoval completo</div>
+    </div>
+  </div>
+
+  <div class="progress-hero">
+    <div class="progress-hero-label">Progresso do enxoval</div>
+    <div class="progress-hero-bar"><div class="progress-hero-fill" id="progress-bar" style="width:0%"></div></div>
+    <div class="progress-hero-pct" id="progress-pct">0%</div>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="main-grid">
+    <div id="rooms-content"></div>
+    <div class="sidebar">
+      <div class="side-card">
+        <div class="side-card-title">Status dos itens</div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" viewBox="0 0 160 160" id="donut-svg"></svg>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+      <div class="side-card">
+        <div class="side-card-title">Por cômodo</div>
+        <div class="room-mini" id="room-mini"></div>
+      </div>
+      <div class="side-card">
+        <div class="side-card-title">Orçamento por cômodo</div>
+        <div class="budget-bar-wrap" id="budget-breakdown"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBvUma6NIX8649jHK_tH3Mwb4H7s2wWLr8",
+  authDomain: "meu-enxoval-casa-nova.firebaseapp.com",
+  projectId: "meu-enxoval-casa-nova",
+  storageBucket: "meu-enxoval-casa-nova.firebasestorage.app",
+  messagingSenderId: "493615940362",
+  appId: "1:493615940362:web:6461661cb2cfee37e3b0f3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const DOC_REF = doc(db, "enxoval", "lista");
+
+const ROOMS = {
+  "Sala de Estar": {
+    icon: "🛋️",
+    items: [
+      {name:"Sofá",qty:1},{name:"Mesa de centro",qty:1},{name:"Estante / rack",qty:1},
+      {name:"TV",qty:1},{name:"Tapete",qty:1},{name:"Cortina / persiana",qty:2},
+      {name:"Luminária de piso",qty:1},{name:"Almofadas",qty:4},{name:"Quadros decorativos",qty:2},
+      {name:"Espelho",qty:1},{name:"Mesa lateral",qty:2},{name:"Aparador",qty:1},
+    ]
+  },
+  "Quarto": {
+    icon: "🛏️",
+    items: [
+      {name:"Cama (estrutura)",qty:1},{name:"Colchão",qty:1},{name:"Guarda-roupa",qty:1},
+      {name:"Cômoda",qty:1},{name:"Criado-mudo",qty:2},{name:"Abajur / luminária",qty:2},
+      {name:"Espelho de parede",qty:1},{name:"Jogo de cama",qty:2},{name:"Edredom / cobertor",qty:1},
+      {name:"Travesseiros",qty:2},{name:"Cortina / persiana",qty:1},{name:"Tapete",qty:1},
+      {name:"Cabide / sapateira",qty:1},
+    ]
+  },
+  "Cozinha": {
+    icon: "🍳",
+    items: [
+      {name:"Geladeira",qty:1},{name:"Fogão / cooktop",qty:1},{name:"Forno / micro-ondas",qty:1},
+      {name:"Máquina de lavar louça",qty:1},{name:"Mesa de jantar",qty:1},{name:"Cadeiras",qty:4},
+      {name:"Panelas (jogo)",qty:1},{name:"Talheres (jogo)",qty:1},{name:"Pratos (jogo)",qty:1},
+      {name:"Copos e taças",qty:6},{name:"Utensílios de cozinha",qty:1},{name:"Lixeira",qty:1},
+      {name:"Cafeteira",qty:1},{name:"Liquidificador / mixer",qty:1},{name:"Toalha de mesa",qty:1},
+    ]
+  },
+  "Banheiro": {
+    icon: "🚿",
+    items: [
+      {name:"Toalha de banho",qty:4},{name:"Toalha de rosto",qty:4},{name:"Toalha de piso",qty:2},
+      {name:"Espelho",qty:1},{name:"Armário de banheiro",qty:1},{name:"Porta-toalha",qty:1},
+      {name:"Saboneteira / dispenser",qty:1},{name:"Lixeira",qty:1},{name:"Tapete de banheiro",qty:1},
+      {name:"Cortina de box",qty:1},{name:"Porta-shampoo",qty:1},
+    ]
+  }
+};
+
+let state = {};
+let saveTimeout = null;
+let isInitialLoad = true;
+
+function getDefaultState() {
+  const s = {};
+  for (const [room, data] of Object.entries(ROOMS)) {
+    s[room] = data.items.map(it => ({ name: it.name, qty: it.qty, price: '', status: 'A comprar' }));
+  }
+  return s;
+}
+
+// Salva no Firestore com debounce (evita salvar a cada tecla)
+function saveState() {
+  clearTimeout(saveTimeout);
+  showSync('Salvando...');
+  saveTimeout = setTimeout(async () => {
+    try {
+      await setDoc(DOC_REF, { state: JSON.stringify(state), updatedAt: Date.now() });
+      showSync('Salvo ✓', 1500);
+    } catch (e) {
+      showSync('Erro ao salvar ✗', 2000);
+      console.error(e);
+    }
+  }, 800);
+}
+
+function showSync(msg, hideAfter = 0) {
+  const el = document.getElementById('sync-indicator');
+  document.getElementById('sync-text').textContent = msg;
+  el.classList.add('show');
+  if (hideAfter) setTimeout(() => el.classList.remove('show'), hideAfter);
+}
+
+// Escuta mudanças em tempo real do Firestore
+onSnapshot(DOC_REF, (snap) => {
+  if (snap.exists()) {
+    const data = snap.data();
+    const incoming = JSON.parse(data.state);
+    // Garante que novos cômodos do ROOMS existam no state salvo
+    for (const room of Object.keys(ROOMS)) {
+      if (!incoming[room]) incoming[room] = getDefaultState()[room];
+    }
+    state = incoming;
+  } else {
+    state = getDefaultState();
+    saveState();
+  }
+
+  refresh();
+
+  if (isInitialLoad) {
+    isInitialLoad = false;
+    const overlay = document.getElementById('loading-overlay');
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.remove(), 500);
+    buildTabs();
+    setTimeout(() => {
+      document.querySelectorAll('.room-mini-fill, .budget-bar-fill, .progress-hero-fill').forEach(el => {
+        const w = el.style.width;
+        el.style.width = '0%';
+        setTimeout(() => el.style.width = w, 100);
+      });
+    }, 150);
+  }
+});
+
+// ---- UI ----
+
+function getStatusClass(s) { return 'status-' + s; }
+
+const statusColors = {
+  'A comprar': '#C4714A',
+  'Pesquisando': '#D4A017',
+  'Comprado': '#7C9A7E',
+  'Instalado': '#4A6B4C',
+};
+
+function buildTabs() {
+  const container = document.getElementById('tabs');
+  container.innerHTML = '';
+  const rooms = Object.keys(ROOMS);
+  rooms.forEach((room, i) => {
+    const pending = state[room].filter(it => it.status === 'A comprar').length;
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (i === 0 ? ' active' : '');
+    btn.dataset.room = room;
+    btn.innerHTML = `${ROOMS[room].icon} ${room} ${pending > 0 ? `<span class="badge">${pending}</span>` : ''}`;
+    btn.onclick = () => switchTab(room);
+    container.appendChild(btn);
+  });
+}
+
+function switchTab(room) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.room === room));
+  document.querySelectorAll('.room-section').forEach(s => s.classList.toggle('visible', s.dataset.room === room));
+}
+
+function buildRooms() {
+  const container = document.getElementById('rooms-content');
+  const activeRoom = document.querySelector('.tab.active')?.dataset.room || Object.keys(ROOMS)[0];
+  container.innerHTML = '';
+  Object.entries(ROOMS).forEach(([room, data], ri) => {
+    const items = state[room];
+    const section = document.createElement('div');
+    section.className = 'room-section' + (room === activeRoom ? ' visible' : '');
+    section.dataset.room = room;
+
+    const completed = items.filter(it => it.status === 'Comprado' || it.status === 'Instalado').length;
+    const pct = items.length > 0 ? Math.round(completed / items.length * 100) : 0;
+
+    section.innerHTML = `
+      <div class="room-header">
+        <div class="room-title">${data.icon} ${room}</div>
+        <div class="room-badge">${completed}/${items.length} concluídos · ${pct}%</div>
+      </div>
+      <div class="items-header">
+        <div>Item</div><div>Qtd.</div><div>Preço unit.</div><div>Total</div><div>Status</div>
+      </div>
+      <div class="items-list" id="list-${ri}"></div>
+      <div class="add-item-row">
+        <input class="add-input" placeholder="+ Adicionar item..." id="add-input-${ri}">
+        <button class="add-btn" onclick="addItem('${room}', ${ri})">Adicionar</button>
+      </div>
+    `;
+    container.appendChild(section);
+
+    const list = section.querySelector(`#list-${ri}`);
+    items.forEach((item, idx) => renderItem(list, room, item, idx));
+
+    section.querySelector(`#add-input-${ri}`).addEventListener('keydown', e => {
+      if (e.key === 'Enter') addItem(room, ri);
+    });
+  });
+}
+
+function renderItem(list, room, item, idx) {
+  const total = item.price ? (parseFloat(item.price) * item.qty).toFixed(2) : '';
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.style.animationDelay = (idx * 0.03) + 's';
+  card.innerHTML = `
+    <div class="item-name">${item.name}</div>
+    <div class="item-qty-wrap">
+      <button class="qty-btn" onclick="changeQty('${room}',${idx},-1)">−</button>
+      <div class="qty-display">${item.qty}</div>
+      <button class="qty-btn" onclick="changeQty('${room}',${idx},1)">+</button>
+    </div>
+    <input type="number" class="price-input" placeholder="R$ 0,00"
+      value="${item.price || ''}"
+      oninput="updatePrice('${room}',${idx},this.value)"
+      min="0" step="0.01">
+    <div class="item-total">${total ? 'R$ ' + parseFloat(total).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—'}</div>
+    <select class="status-select ${getStatusClass(item.status)}"
+      onchange="updateStatus('${room}',${idx},this.value)">
+      ${['A comprar','Pesquisando','Comprado','Instalado'].map(s =>
+        `<option value="${s}" ${s===item.status?'selected':''}>${s}</option>`).join('')}
+    </select>
+  `;
+  list.appendChild(card);
+}
+
+// Expõe funções para os onclick do HTML
+window.changeQty = function(room, idx, delta) {
+  state[room][idx].qty = Math.max(1, state[room][idx].qty + delta);
+  saveState(); refresh();
+};
+window.updatePrice = function(room, idx, val) {
+  state[room][idx].price = val;
+  saveState(); updateStats(); updateSidebar();
+};
+window.updateStatus = function(room, idx, val) {
+  state[room][idx].status = val;
+  saveState(); refresh();
+};
+window.addItem = function(room, ri) {
+  const input = document.getElementById(`add-input-${ri}`);
+  const name = input.value.trim();
+  if (!name) return;
+  state[room].push({ name, qty: 1, price: '', status: 'A comprar' });
+  input.value = '';
+  saveState(); refresh();
+  showToast(`"${name}" adicionado!`);
+};
+window.exportCSV = function() {
+  let csv = 'Cômodo,Item,Qtd.,Preço Unit. (R$),Total (R$),Status\n';
+  Object.entries(state).forEach(([room, items]) => {
+    items.forEach(item => {
+      const total = item.price ? (parseFloat(item.price)*item.qty).toFixed(2) : '';
+      csv += `"${room}","${item.name}",${item.qty},"${item.price||''}","${total}","${item.status}"\n`;
+    });
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'enxoval.csv';
+  a.click();
+  showToast('CSV exportado!');
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function updateStats() {
+  const allItems = Object.values(state).flat();
+  const total = allItems.length;
+  const comprados = allItems.filter(i => i.status === 'Comprado' || i.status === 'Instalado').length;
+  const orcamento = allItems.reduce((s, i) => s + (i.price ? parseFloat(i.price) * i.qty : 0), 0);
+  const pct = total > 0 ? Math.round(comprados / total * 100) : 0;
+
+  document.getElementById('total-itens').textContent = total;
+  document.getElementById('total-comprados').textContent = comprados;
+  document.getElementById('total-orcamento').innerHTML = `<span>R$</span> ${orcamento.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0})}`;
+  document.getElementById('total-progresso').innerHTML = `${pct}<span>%</span>`;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+}
+
+function updateSidebar() {
+  const statuses = ['A comprar','Pesquisando','Comprado','Instalado'];
+  const counts = {};
+  statuses.forEach(s => counts[s] = 0);
+  Object.values(state).flat().forEach(i => counts[i.status]++);
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  const svg = document.getElementById('donut-svg');
+  svg.innerHTML = '';
+  const cx=80,cy=80,r=60,ir=38;
+  let startAngle = -Math.PI/2;
+  statuses.forEach((s, si) => {
+    const cnt = counts[s];
+    if (cnt === 0) return;
+    const angle = (cnt / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+    const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle), y2=cy+r*Math.sin(endAngle);
+    const ix1=cx+ir*Math.cos(startAngle), iy1=cy+ir*Math.sin(startAngle);
+    const ix2=cx+ir*Math.cos(endAngle), iy2=cy+ir*Math.sin(endAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${ir},${ir} 0 ${large},0 ${ix1},${iy1} Z`);
+    path.setAttribute('fill', Object.values(statusColors)[si]);
+    svg.appendChild(path);
+    startAngle = endAngle;
+  });
+  const pct = total > 0 ? Math.round((counts['Comprado']+counts['Instalado'])/total*100) : 0;
+  svg.innerHTML += `<text x="80" y="76" class="donut-center" font-family="Playfair Display, serif" font-size="22" font-weight="700" fill="#2C2C2C">${pct}%</text>
+    <text x="80" y="96" class="donut-center" font-family="DM Sans, sans-serif" font-size="10" fill="#9B9B9B">completo</text>`;
+
+  const legend = document.getElementById('donut-legend');
+  legend.innerHTML = '';
+  statuses.forEach((s, si) => {
+    legend.innerHTML += `<div class="legend-item">
+      <div class="legend-dot" style="background:${Object.values(statusColors)[si]}"></div>
+      <div class="legend-label">${s}</div>
+      <div class="legend-count">${counts[s]}</div>
+    </div>`;
+  });
+
+  const mini = document.getElementById('room-mini');
+  mini.innerHTML = '';
+  Object.entries(ROOMS).forEach(([room, data]) => {
+    const items = state[room];
+    const done = items.filter(i => i.status==='Comprado'||i.status==='Instalado').length;
+    const pct = items.length > 0 ? Math.round(done/items.length*100) : 0;
+    mini.innerHTML += `<div class="room-mini-row">
+      <div class="room-mini-top"><span class="room-mini-name">${data.icon} ${room}</span><span class="room-mini-pct">${pct}%</span></div>
+      <div class="room-mini-bar"><div class="room-mini-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  });
+
+  const budget = document.getElementById('budget-breakdown');
+  budget.innerHTML = '';
+  const totals = Object.entries(ROOMS).map(([room]) => ({
+    room,
+    total: state[room].reduce((s,i) => s+(i.price?parseFloat(i.price)*i.qty:0),0)
+  }));
+  const maxT = Math.max(...totals.map(t=>t.total), 1);
+  totals.forEach(({room, total}) => {
+    budget.innerHTML += `
+      <div class="budget-row">
+        <span class="budget-room">${ROOMS[room].icon} ${room}</span>
+        <span class="budget-val">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+      </div>
+      <div class="budget-bar"><div class="budget-bar-fill" style="width:${(total/maxT*100)}%"></div></div>
+    `;
+  });
+}
+
+function updateTabs() {
+  Object.keys(ROOMS).forEach(room => {
+    const tab = document.querySelector(`.tab[data-room="${room}"]`);
+    if (!tab) return;
+    const pending = state[room].filter(it => it.status === 'A comprar').length;
+    tab.innerHTML = `${ROOMS[room].icon} ${room} ${pending > 0 ? `<span class="badge">${pending}</span>` : ''}`;
+    tab.onclick = () => switchTab(room);
+  });
+}
+
+function refresh() {
+  buildRooms();
+  updateStats();
+  updateSidebar();
+  updateTabs();
+}
+
+</script>
+</body>
+</html>
